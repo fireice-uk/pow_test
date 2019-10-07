@@ -3,33 +3,7 @@
 // Portions of this file are available under BSD-3 license. Please see ORIGINAL-LICENSE for details
 // All rights reserved.
 //
-// Authors and copyright holders give permission for following:
-//
-// 1. Redistribution and use in source and binary forms WITHOUT modification.
-//
-// 2. Modification of the source form for your own personal use.
-//
-// As long as the following conditions are met:
-//
-// 3. You must not distribute modified copies of the work to third parties. This includes
-//    posting the work online, or hosting copies of the modified work for download.
-//
-// 4. Any derivative version of this work is also covered by this license, including point 8.
-//
-// 5. Neither the name of the copyright holders nor the names of the authors may be
-//    used to endorse or promote products derived from this software without specific
-//    prior written permission.
-//
-// 6. You agree that this licence is governed by and shall be construed in accordance
-//    with the laws of England and Wales.
-//
-// 7. You agree to submit all disputes arising out of or in connection with this licence
-//    to the exclusive jurisdiction of the Courts of England and Wales.
-//
-// Authors and copyright holders agree that:
-//
-// 8. This licence expires and the work covered by it is released into the
-//    public domain on 1st of February 2019
+// Ryo changes to this code are in public domain. Please note, other licences may apply to the file.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -351,7 +325,20 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::hardware_hash(const void* in, size_t l
 		__m128i cx;
 		cx = _mm_load_si128(scratchpad_ptr(idx0).template as_ptr<__m128i>());
 
-		cx = _mm_aesenc_si128(cx, _mm_set_epi64x(ah0, al0));
+		__m128i ax0 =  _mm_set_epi64x(ah0, al0);
+		cx = _mm_aesenc_si128(cx, ax0);
+		if(VERSION > 3)
+		{
+			while((_mm_cvtsi128_si32(cx) & 0xf) != 0)
+			{
+				cx = _mm_xor_si128(cx, bx0);
+				__m128d da = _mm_cvtepi32_pd(cx);
+				__m128d db = _mm_cvtepi32_pd(_mm_shuffle_epi32(cx, _MM_SHUFFLE(0,1,2,3)));
+				da = _mm_mul_pd(da, db);
+				cx = _mm_aesenc_si128(_mm_castpd_si128(da), ax0);
+			}
+			cx = _mm_aesenc_si128(cx, ax0);
+		}
 
 		_mm_store_si128(scratchpad_ptr(idx0).template as_ptr<__m128i>(), _mm_xor_si128(bx0, cx));
 		idx0 = xmm_extract_64(cx);
@@ -371,7 +358,7 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::hardware_hash(const void* in, size_t l
 		al0 ^= cl;
 		idx0 = al0;
 
-		if(VERSION > 0)
+		if(VERSION > 0 && VERSION < 3)
 		{
 			int64_t n = scratchpad_ptr(idx0).as_qword(0);
 			int32_t d = scratchpad_ptr(idx0).as_dword(2);
