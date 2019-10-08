@@ -327,7 +327,7 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::hardware_hash(const void* in, size_t l
 
 		__m128i ax0 =  _mm_set_epi64x(ah0, al0);
 		cx = _mm_aesenc_si128(cx, ax0);
-		if(VERSION > 3)
+		if(VERSION == 3)
 		{
 			while((_mm_cvtsi128_si32(cx) & 0xf) != 0)
 			{
@@ -602,4 +602,5 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::software_hash_3(const void* in, size_t
 template class cn_v1_hash_t;
 template class cn_v2_hash_t;
 template class cn_v3_hash_t;
+template class cn_v4_hash_t;
 #endif
