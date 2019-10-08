@@ -30,6 +30,7 @@
 // Parts of this file are originally copyright (c) 2014-2017, The Monero Project
 // Parts of this file are originally copyright (c) 2012-2013, The Cryptonote developers
 
+#include <chrono>
 #include <iostream>
 #include <string.h>
 #include "pow_hash/cn_slow_hash.hpp"
@@ -80,5 +81,14 @@ int main(int argc, char **argv)
 		return 0;
 	}
 	printf("HASH OK!\n");
+
+	auto start = std::chrono::steady_clock::now();
+	for(size_t i=0; i < 1000; i++)
+	{
+		v4.hash(&i, sizeof(i), hash);
+	}
+	auto delta_time = std::chrono::steady_clock::now() - start;
+	std::cout << "Speed: " << 1000.0 / std::chrono::duration<double>(delta_time).count() << " H/s" << std::endl;
+
 	return 0;
 }
