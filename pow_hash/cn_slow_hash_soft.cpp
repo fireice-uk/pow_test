@@ -320,52 +320,6 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::implode_scratchpad_soft()
 		aes_round8(k7, x0, x1, x2, x3, x4, x5, x6, x7);
 		aes_round8(k8, x0, x1, x2, x3, x4, x5, x6, x7);
 		aes_round8(k9, x0, x1, x2, x3, x4, x5, x6, x7);
-
-		if(VERSION > 0)
-			xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
-	}
-
-	// Note, this loop is only executed if VERSION > 0
-	for(size_t i = 0; VERSION > 0 && i < MEMORY / sizeof(uint64_t); i += 16)
-	{
-		x0.xor_load(lpad.as_uqword() + i + 0);
-		x1.xor_load(lpad.as_uqword() + i + 2);
-		x2.xor_load(lpad.as_uqword() + i + 4);
-		x3.xor_load(lpad.as_uqword() + i + 6);
-		x4.xor_load(lpad.as_uqword() + i + 8);
-		x5.xor_load(lpad.as_uqword() + i + 10);
-		x6.xor_load(lpad.as_uqword() + i + 12);
-		x7.xor_load(lpad.as_uqword() + i + 14);
-
-		aes_round8(k0, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k1, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k2, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k3, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k4, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k5, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k6, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k7, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k8, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k9, x0, x1, x2, x3, x4, x5, x6, x7);
-
-		xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
-	}
-
-	// Note, this loop is only executed if VERSION > 0
-	for(size_t i = 0; VERSION > 0 && i < 16; i++)
-	{
-		aes_round8(k0, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k1, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k2, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k3, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k4, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k5, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k6, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k7, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k8, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k9, x0, x1, x2, x3, x4, x5, x6, x7);
-
-		xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
 	}
 
 	x0.write(spad.as_uqword() + 8);
@@ -394,23 +348,6 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::explode_scratchpad_soft()
 	x5.load(spad.as_uqword() + 18);
 	x6.load(spad.as_uqword() + 20);
 	x7.load(spad.as_uqword() + 22);
-
-	// Note, this loop is only executed if VERSION > 0
-	for(size_t i = 0; VERSION > 0 && i < 16; i++)
-	{
-		aes_round8(k0, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k1, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k2, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k3, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k4, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k5, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k6, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k7, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k8, x0, x1, x2, x3, x4, x5, x6, x7);
-		aes_round8(k9, x0, x1, x2, x3, x4, x5, x6, x7);
-
-		xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
-	}
 
 	for(size_t i = 0; i < MEMORY / sizeof(uint64_t); i += 16)
 	{
@@ -542,19 +479,6 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::software_hash(const void* in, size_t l
 
 		ax ^= bx;
 		idx = scratchpad_ptr(ax.v64x0);
-		if(VERSION > 0)
-		{
-			int64_t n = idx.as_qword(0);
-			int32_t d = idx.as_dword(2);
-
-#if defined(__arm__)
-			asm volatile("nop"); //Fix for RasPi3 ARM - maybe needed on armv8
-#endif
-
-			int64_t q = n / (d | 5);
-			idx.as_qword(0) = n ^ q;
-			idx = scratchpad_ptr(d ^ q);
-		}
 
 		bx.load(idx);
 
@@ -572,19 +496,6 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::software_hash(const void* in, size_t l
 		ax.write(idx);
 		ax ^= cx;
 		idx = scratchpad_ptr(ax.v64x0);
-		if(VERSION > 0)
-		{
-			int64_t n = idx.as_qword(0); // read bytes 0 - 7
-			int32_t d = idx.as_dword(2); // read bytes 8 - 11
-
-#if defined(__arm__) || defined(__aarch64__)
-			asm volatile("nop"); //Fix for RasPi3 ARM - maybe needed on armv8
-#endif
-
-			int64_t q = n / (d | 5);
-			idx.as_qword(0) = n ^ q;
-			idx = scratchpad_ptr(d ^ q);
-		}
 	}
 
 	implode_scratchpad_soft();
@@ -609,5 +520,5 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::software_hash(const void* in, size_t l
 }
 
 template class cn_v1_hash_t;
-template class cn_v2_hash_t;
-template class cn_v3_hash_t;
+template class cn_v7l_hash_t;
+template class cn_gpu_hash_t;

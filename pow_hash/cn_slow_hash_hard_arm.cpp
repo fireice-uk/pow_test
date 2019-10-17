@@ -599,6 +599,6 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::software_hash_3(const void* in, size_t
 }
 
 template class cn_v1_hash_t;
-template class cn_v2_hash_t;
-template class cn_v3_hash_t;
+template class cn_v7l_hash_t;
+template class cn_gpu_hash_t;
 #endif

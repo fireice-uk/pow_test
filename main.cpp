@@ -34,9 +34,10 @@
 #include <string.h>
 #include "pow_hash/cn_slow_hash.hpp"
 
-#include "hashes.h"
+const char* input = "\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x74\x65\x73\x74\x20\x54\x68\x69\x73\x20\x69\x73"
+	"\x20\x61\x20\x74\x65\x73\x74\x20\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x74\x65\x73\x74";
 
-const char* zero_hash = "\x55\x5e\x0a\xee\x78\x79\x31\x6d\x7d\xef\xf7\x72\x97\x3c\xb9\x11\x8e\x38\x95\x70\x9d\xb2\x54\x7a\xc0\x72\xd5\xb9\x13\x10\x01\xd8";
+const char* test_hash = "\xfc\xa1\x7d\x44\x37\x70\x9b\x4a\x3b\xd7\x1e\xf3\xed\x21\xb4\x17\xca\x93\xdc\x86\x79\xce\x81\xdf\xd3\xcb\xdd\x0a\x22\xd7\x58\xba";
 
 inline bool cmp_hash(const uint8_t* calc, const char* exp)
 {
@@ -54,25 +55,14 @@ inline void print_hash(const void* hash)
 
 int main(int argc, char **argv) 
 {
-	uint8_t hash[32];
-	
-	cn_pow_hash_v3 v3;
+	uint8_t hash[32];	
+	cn_v7l_hash v2;
 
-	v3.hash("", 0, hash);
-	if(!cmp_hash(hash, zero_hash))
+	v2.hardware_hash(input, 44, hash);
+	if(!cmp_hash(hash, test_hash))
 	{
 		printf("HASH FAILED!\n");
 		print_hash(hash);
-	}
-
-	for(uint32_t i=0; i < 1000; i++)
-	{
-		v3.hash(&i, sizeof(i), hash);
-		if(!cmp_hash(hash, good_hashes[i]))
-		{
-			printf("HASH FAILED (%u)!\n", i);
-			print_hash(hash);
-		}
 	}
 
 	printf("Verify ok.\n");

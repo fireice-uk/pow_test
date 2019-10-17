@@ -58,18 +58,18 @@
 
 // Macros are for template instantiations
 // Cryptonight
-#define cn_v1_hash_t cn_slow_hash<2 * 1024 * 1024, 0x80000, 0>
-// Cryptonight-heavy
-#define cn_v2_hash_t cn_slow_hash<4 * 1024 * 1024, 0x40000, 1>
+#define cn_v1_hash_t  cn_slow_hash<2 * 1024 * 1024, 0x80000, 0>
+// Cryptonight-v7
+#define cn_v7l_hash_t cn_slow_hash<1 * 1024 * 1024, 0x40000, 1>
 // Cryptonight-GPU
-#define cn_v3_hash_t cn_slow_hash<2 * 1024 * 1024, 0xC000, 2>
+#define cn_gpu_hash_t cn_slow_hash<2 * 1024 * 1024, 0xC000,  2>
 
 // Use the types below
 template <size_t MEMORY, size_t ITER, size_t VERSION>
 class cn_slow_hash;
-using cn_pow_hash_v1 = cn_v1_hash_t;
-using cn_pow_hash_v2 = cn_v2_hash_t;
-using cn_pow_hash_v3 = cn_v3_hash_t;
+using cn_v1_hash = cn_v1_hash_t;
+using cn_v7l_hash = cn_v7l_hash_t;
+using cn_gpu_hash = cn_gpu_hash_t;
 
 #ifdef HAS_INTEL_HW
 inline void cpuid(uint32_t eax, int32_t ecx, int32_t val[4])
@@ -168,14 +168,14 @@ class cn_slow_hash
 
 	// Factory function enabling to temporaliy turn v2 object into v1
 	// It is caller's responsibility to ensure that v2 object is not hashing at the same time!!
-	static cn_pow_hash_v1 make_borrowed(cn_pow_hash_v2& t)
+	static cn_v7l_hash make_borrowed(cn_v1_hash& t)
 	{
-		return cn_pow_hash_v1(t.lpad.as_void(), t.spad.as_void());
+		return cn_v7l_hash(t.lpad.as_void(), t.spad.as_void());
 	}
 
-	static cn_pow_hash_v3 make_borrowed_v3(cn_pow_hash_v2& t)
+	static cn_gpu_hash make_borrowed_v3(cn_v1_hash& t)
 	{
-		return cn_pow_hash_v3(t.lpad.as_void(), t.spad.as_void());
+		return cn_gpu_hash(t.lpad.as_void(), t.spad.as_void());
 	}
 
 	cn_slow_hash& operator=(cn_slow_hash&& other) noexcept
@@ -231,12 +231,12 @@ class cn_slow_hash
 	void hardware_hash_3(const void* in, size_t len, void* pout);
 #endif
 
-  private:
+private:
 	static constexpr size_t MASK = VERSION <= 1 ? ((MEMORY - 1) >> 4) << 4 : ((MEMORY - 1) >> 6) << 6;
 
-	friend cn_pow_hash_v1;
-	friend cn_pow_hash_v2;
-	friend cn_pow_hash_v3;
+	friend cn_v1_hash;
+	friend cn_v7l_hash;
+	friend cn_gpu_hash;
 
 	// Constructor enabling v1 hash to borrow v2's buffer
 	cn_slow_hash(void* lptr, void* sptr)
@@ -304,5 +304,5 @@ class cn_slow_hash
 };
 
 extern template class cn_v1_hash_t;
-extern template class cn_v2_hash_t;
-extern template class cn_v3_hash_t;
+extern template class cn_v7l_hash_t;
+extern template class cn_gpu_hash_t;

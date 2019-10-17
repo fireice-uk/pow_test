@@ -231,6 +231,6 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::inner_hash_3_avx()
 }
 
 template class cn_v1_hash_t;
-template class cn_v2_hash_t;
-template class cn_v3_hash_t;
+template class cn_v7l_hash_t;
+template class cn_gpu_hash_t;
 #endif
