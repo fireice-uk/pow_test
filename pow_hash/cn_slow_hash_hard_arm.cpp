@@ -323,7 +323,20 @@ inline void cryptonight_monero_tweak(uint64_t* mem_out, uint8x16_t tmp)
 template <size_t MEMORY, size_t ITER, size_t VERSION>
 void cn_slow_hash<MEMORY, ITER, VERSION>::hardware_hash(const void* in, size_t len, void* out)
 {
+	if(VERSION == 1 && len < 43)
+	{
+		memset(out, 0, 32);
+		return;
+	}
+
 	keccak((const uint8_t*)in, len, spad.as_byte(), 200);
+
+	uint64_t mc0;
+	if(VERSION == 1)
+	{
+		mc0  =  *reinterpret_cast<const uint64_t*>(reinterpret_cast<const uint8_t*>(in) + 35);
+		mc0 ^=  *(spad.as_uqword()+24);
+	}
 
 	explode_scratchpad_hard();
 
@@ -346,7 +359,7 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::hardware_hash(const void* in, size_t l
 
 		bx0 ^= cx;
 		if(VERSION == 1) 
-			cryptonight_monero_tweak(idx0.template as_ptr<uint64_t>(), bx0); 
+			cryptonight_monero_tweak(scratchpad_ptr(idx0).template as_ptr<uint64_t>(), bx0); 
 		else 
 			vst1q_u8(scratchpad_ptr(idx0).as_byte(), bx0);
 
