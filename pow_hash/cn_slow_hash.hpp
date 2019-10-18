@@ -173,6 +173,11 @@ class cn_slow_hash
 		return cn_v7l_hash(t.lpad.as_void(), t.spad.as_void());
 	}
 
+	static cn_v7l_hash make_borrowed(cn_gpu_hash& t)
+	{
+		return cn_v7l_hash(t.lpad.as_void(), t.spad.as_void());
+	}
+
 	static cn_gpu_hash make_borrowed_v3(cn_v1_hash& t)
 	{
 		return cn_gpu_hash(t.lpad.as_void(), t.spad.as_void());

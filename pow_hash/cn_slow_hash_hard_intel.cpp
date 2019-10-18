@@ -157,6 +157,32 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::implode_scratchpad_hard()
 		x5 = _mm_xor_si128(_mm_load_si128(lpad.as_ptr<__m128i>() + i + 5), x5);
 		x6 = _mm_xor_si128(_mm_load_si128(lpad.as_ptr<__m128i>() + i + 6), x6);
 		x7 = _mm_xor_si128(_mm_load_si128(lpad.as_ptr<__m128i>() + i + 7), x7);
+		
+		aes_round8(k0, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k1, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k2, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k3, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k4, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k5, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k6, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k7, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k8, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k9, x0, x1, x2, x3, x4, x5, x6, x7);
+
+		if(VERSION == 2)
+			xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
+	}
+
+	for(size_t i = 0; VERSION == 2 && i < MEMORY / sizeof(__m128i); i += 8)
+	{
+		x0 = _mm_xor_si128(_mm_load_si128(lpad.as_ptr<__m128i>() + i + 0), x0);
+		x1 = _mm_xor_si128(_mm_load_si128(lpad.as_ptr<__m128i>() + i + 1), x1);
+		x2 = _mm_xor_si128(_mm_load_si128(lpad.as_ptr<__m128i>() + i + 2), x2);
+		x3 = _mm_xor_si128(_mm_load_si128(lpad.as_ptr<__m128i>() + i + 3), x3);
+		x4 = _mm_xor_si128(_mm_load_si128(lpad.as_ptr<__m128i>() + i + 4), x4);
+		x5 = _mm_xor_si128(_mm_load_si128(lpad.as_ptr<__m128i>() + i + 5), x5);
+		x6 = _mm_xor_si128(_mm_load_si128(lpad.as_ptr<__m128i>() + i + 6), x6);
+		x7 = _mm_xor_si128(_mm_load_si128(lpad.as_ptr<__m128i>() + i + 7), x7);
 
 		aes_round8(k0, x0, x1, x2, x3, x4, x5, x6, x7);
 		aes_round8(k1, x0, x1, x2, x3, x4, x5, x6, x7);
@@ -168,6 +194,24 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::implode_scratchpad_hard()
 		aes_round8(k7, x0, x1, x2, x3, x4, x5, x6, x7);
 		aes_round8(k8, x0, x1, x2, x3, x4, x5, x6, x7);
 		aes_round8(k9, x0, x1, x2, x3, x4, x5, x6, x7);
+		
+		xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
+	}
+
+	for(size_t i = 0; VERSION == 2 && i < 16; i++)
+	{
+		aes_round8(k0, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k1, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k2, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k3, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k4, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k5, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k6, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k7, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k8, x0, x1, x2, x3, x4, x5, x6, x7);
+		aes_round8(k9, x0, x1, x2, x3, x4, x5, x6, x7);
+
+		xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
 	}
 
 	_mm_store_si128(spad.as_ptr<__m128i>() + 4, x0);
@@ -272,10 +316,10 @@ inline uint64_t xmm_extract_64(__m128i x)
 
 inline void cryptonight_monero_tweak(uint64_t* mem_out, __m128i tmp)
 {
-	mem_out[0] = _mm_cvtsi128_si64(tmp);
+	mem_out[0] = xmm_extract_64(tmp);
 	
 	tmp = (__m128i)_mm_movehl_ps((__m128)tmp, (__m128)tmp);
-	uint64_t vh = _mm_cvtsi128_si64(tmp);
+	uint64_t vh = xmm_extract_64(tmp);
 	
 	uint8_t x = vh >> 24;
 	static const uint16_t table = 0x7531;
@@ -381,11 +425,11 @@ inline __m128 _mm_set1_ps_epi32(uint32_t x)
 	return _mm_castsi128_ps(_mm_set1_epi32(x));
 }
 
-inline __m128 fma_break(__m128 x) 
-{ 
-	// Break the dependency chain by setitng the exp to ?????01 
-	__m128 xx = _mm_and_ps(_mm_set1_ps_epi32(0xFEFFFFFF), x); 
-	return _mm_or_ps(_mm_set1_ps_epi32(0x00800000), xx); 
+inline __m128 fma_break(__m128 x)
+{
+	// Break the dependency chain by setitng the exp to ?????01
+	__m128 xx = _mm_and_ps(_mm_set1_ps_epi32(0xFEFFFFFF), x);
+	return _mm_or_ps(_mm_set1_ps_epi32(0x00800000), xx);
 }
 
 // 14
@@ -580,7 +624,8 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::software_hash_3(const void* in, size_t
 	memcpy(pout, spad.as_byte(), 32);
 }
 
+template class cn_gpu_hash_t;
 template class cn_v1_hash_t;
 template class cn_v7l_hash_t;
-template class cn_gpu_hash_t;
+
 #endif

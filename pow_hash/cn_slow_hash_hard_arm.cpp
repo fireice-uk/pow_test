@@ -212,11 +212,11 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::implode_scratchpad_hard()
 		aes_round10(x6, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
 		aes_round10(x7, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
 
-		if(VERSION > 0)
+		if(VERSION == 2)
 			xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
 	}
 
-	for(size_t i = 0; VERSION > 0 && i < MEMORY; i += 128)
+	for(size_t i = 0; VERSION == 2 && i < MEMORY; i += 128)
 	{
 		mem_load(lpad, i, x0, x1, x2, x3, x4, x5, x6, x7);
 
@@ -232,7 +232,7 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::implode_scratchpad_hard()
 		xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
 	}
 
-	for(size_t i = 0; VERSION > 0 && i < 16; i++)
+	for(size_t i = 0; VERSION == 2 && i < 16; i++)
 	{
 		aes_round10(x0, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
 		aes_round10(x1, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
@@ -273,20 +273,6 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::explode_scratchpad_hard()
 	x6 = vld1q_u8(spad.as_byte() + 160);
 	x7 = vld1q_u8(spad.as_byte() + 176);
 
-	for(size_t i = 0; VERSION > 0 && i < 16; i++)
-	{
-		aes_round10(x0, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
-		aes_round10(x1, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
-		aes_round10(x2, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
-		aes_round10(x3, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
-		aes_round10(x4, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
-		aes_round10(x5, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
-		aes_round10(x6, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
-		aes_round10(x7, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
-
-		xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
-	}
-
 	for(size_t i = 0; i < MEMORY; i += 128)
 	{
 		aes_round10(x0, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
@@ -321,6 +307,19 @@ inline uint8x16_t _mm_set_epi64x(const uint64_t a, const uint64_t b)
 	return vreinterpretq_u8_u64(vcombine_u64(vcreate_u64(b), vcreate_u64(a)));
 }
 
+inline void cryptonight_monero_tweak(uint64_t* mem_out, uint8x16_t tmp)
+{
+	mem_out[0] = vgetq_lane_u64(vreinterpretq_u64_u8(tmp), 0);
+	uint64_t vh = vgetq_lane_u64(vreinterpretq_u64_u8(tmp), 1);
+
+	uint8_t x = vh >> 24;
+	static const uint16_t table = 0x7531;
+	const uint8_t index = (((x >> 3) & 6) | (x & 1)) << 1;
+	vh ^= ((table >> index) & 0x3) << 28;
+
+	mem_out[1] = vh;
+}
+
 template <size_t MEMORY, size_t ITER, size_t VERSION>
 void cn_slow_hash<MEMORY, ITER, VERSION>::hardware_hash(const void* in, size_t len, void* out)
 {
@@ -345,7 +344,11 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::hardware_hash(const void* in, size_t l
 
 		cx = vaesmcq_u8(vaeseq_u8(cx, zero)) ^ _mm_set_epi64x(ah0, al0);
 
-		vst1q_u8(scratchpad_ptr(idx0).as_byte(), bx0 ^ cx);
+		bx0 ^= cx;
+		if(VERSION == 1) 
+			cryptonight_monero_tweak(idx0.template as_ptr<uint64_t>(), bx0); 
+		else 
+			vst1q_u8(scratchpad_ptr(idx0).as_byte(), bx0);
 
 		idx0 = vgetq_lane_u64(vreinterpretq_u64_u8(cx), 0);
 		bx0 = cx;
@@ -359,22 +362,15 @@ void cn_slow_hash<MEMORY, ITER, VERSION>::hardware_hash(const void* in, size_t l
 		al0 += hi;
 		ah0 += lo;
 		scratchpad_ptr(idx0).as_uqword(0) = al0;
-		scratchpad_ptr(idx0).as_uqword(1) = ah0;
+
+		if(VERSION == 1)
+			scratchpad_ptr(idx0).as_uqword(1) = ah0 ^ mc0;
+		else
+			scratchpad_ptr(idx0).as_uqword(1) = ah0;
+
 		ah0 ^= ch;
 		al0 ^= cl;
 		idx0 = al0;
-
-		if(VERSION > 0)
-		{
-			int64_t n = scratchpad_ptr(idx0).as_qword(0);
-			int32_t d = scratchpad_ptr(idx0).as_dword(2);
-#if defined(__arm__) || defined(__aarch64__)
-			asm volatile("nop"); //Fix for RasPi3 ARM - maybe needed on armv8
-#endif
-			int64_t q = n / (d | 5);
-			scratchpad_ptr(idx0).as_qword(0) = n ^ q;
-			idx0 = d ^ q;
-		}
 	}
 
 	implode_scratchpad_hard();
